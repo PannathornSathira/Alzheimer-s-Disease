@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #E91E63;
+  --color-primary-hover: #D81B60;
+  --color-primary-light: #FCE4EC;
+  --color-background-main: #FFFFFF;
+  --color-background-alt: #F8FAFC;
+  --color-text-main: #0F172A;
+  --color-text-muted: #64748B;
+  
+  /* Extending standard colors for Semantic UI */
+  --color-success: #10B981;
+  --color-success-bg: #D1FAE5;
+  --color-danger: #EF4444;
+  --color-danger-bg: #FEE2E2;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
+  --color-info: #3B82F6;
+  --color-info-bg: #DBEAFE;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--color-text-main);
+  background-color: var(--color-background-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar for data tables and panels */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background-alt); 
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8; 
+}
+
+/* ============ PRINT / PDF EXPORT ============ */
+@media print {
+  /* Hide interactive / nav elements */
+  .no-print { display: none !important; }
+
+  /* Full width, no padding, white bg */
+  body { background: white !important; }
+  #root > * { padding: 0 !important; }
+
+  /* Force colors for badges and charts */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove max-width constraint */
+  .max-w-\[1400px\] { max-width: none !important; }
+
+  /* Card shadows look weird in print */
+  .shadow-sm, .shadow-md { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+
+  /* Avoid breaking cards mid-page */
+  .card, [class*="Card"] { break-inside: avoid; }
+
+  /* Print footer with timestamp */
+  body::after {
+    content: "Exported: " attr(data-print-date);
+    display: block;
+    text-align: right;
+    font-size: 10px;
+    color: #94a3b8;
+    padding: 8px 24px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 24px;
+  }
+}

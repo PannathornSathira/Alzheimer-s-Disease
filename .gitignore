@@ -1,0 +1,9 @@
+# Base
+node_modules/
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+#Logic

@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Hospital {
+  id       Int            @id @default(autoincrement())
+  prefix   String         @unique
+  name     String
+  sessions TrialSession[]
+  users    User[]
+  patients Patient[]
+}
+
+model User {
+  id         Int            @id @default(autoincrement())
+  hospitalId Int
+  role       String         // 'admin', 'doctor'
+  hospital   Hospital       @relation(fields: [hospitalId], references: [id])
+  sessions   TrialSession[]
+}
+
+model Patient {
+  id         String         @id @default(uuid()) @db.Uuid
+  hn         String
+  hospitalId Int
+  hospital   Hospital       @relation(fields: [hospitalId], references: [id])
+  sessions   TrialSession[]
+  createdAt  DateTime       @default(now()) @db.Timestamptz()
+  updatedAt  DateTime       @updatedAt @db.Timestamptz()
+
+  @@unique([hospitalId, hn])
+}
+
+model TrialSession {
+  id                         String    @id @default(uuid()) @db.Uuid
+  trialSystemId              String    @unique
+  patientId                  String    @db.Uuid
+  patient                    Patient   @relation(fields: [patientId], references: [id])
+  hospitalId                 Int
+  userId                     Int
+
+  // Status Tracking
+  // REGISTERED → INCLUSION_PASSED → EXCLUSION_PASSED → PAUSED → SCORED → RANDOMIZED
+  // Any step can → DISQUALIFIED
+  currentStatus              String    @default("REGISTERED")
+
+  // Timestamps
+  registrationTimestamp      DateTime  @default(now()) @db.Timestamptz()
+  inclusionPageTimestamp      DateTime? @db.Timestamptz()
+  exclusionPageTimestamp      DateTime? @db.Timestamptz()
+  pauseTimestamp             DateTime? @db.Timestamptz()    // ⬅️ NEW
+  resumeTimestamp            DateTime? @db.Timestamptz()    // ⬅️ NEW
+  scoreTimestamp             DateTime? @db.Timestamptz()
+  randomizationTimestamp     DateTime? @db.Timestamptz()
+
+  // Criteria Results
+  inclusionPassed            Boolean?
+  exclusionPassed            Boolean?
+  failedReason               String?
+
+  // Assessment Score (dynamic — field names from scoreConfig keys)
+  cognitiveSeverityScore     Int?
+  vascularRiskScore          Int?
+  behavioralSymptomsScore    Int?
+  functionalImpairmentScore  Int?
+  familyHistoryScore         Int?
+  totalScore                 Int?
+  strata                     String?   // 'Moderate Risk' or 'High/Very High Risk'
+
+  // Randomization Result
+  allocationResult           String?   // 'Drug Arm (Levetiracetam)' or 'Placebo Arm'
+
+  // Relations
+  hospital                   Hospital  @relation(fields: [hospitalId], references: [id])
+  user                       User      @relation(fields: [userId], references: [id])
+}
