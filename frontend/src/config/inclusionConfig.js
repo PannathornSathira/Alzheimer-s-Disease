@@ -3,9 +3,7 @@
 // All criteria must be checked (true) for patient to proceed.
 // ============================================================
 export const INCLUSION_CRITERIA = [
-  { id: 'inc1', text: 'Age ≥ 18 years' },
-  { id: 'inc2', text: 'Diagnosed with early-onset Alzheimer\'s disease' },
-  { id: 'inc3', text: 'MMSE score between 20–26 (mild cognitive impairment)' },
-  { id: 'inc4', text: 'Provide informed consent and are willing to participate' },
+  { id: 'inc1', text: 'Diagnosed with early-onset Alzheimer’s disease 1/1/2563-31/12/2568' },
+  { id: 'inc2', text: 'MoCA score between 10 - 25' },
 ];
 // To add more criteria, simply add { id: 'inc5', text: '...' }, etc.

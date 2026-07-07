@@ -196,92 +196,40 @@ export function ScoreAssessment() {
           </p>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          {SCORE_CONFIG.parameters.map((param) => (
-            <div
-              key={param.key}
-              className="p-4 bg-white border border-slate-200 rounded-lg hover:border-pink-200 transition-colors"
-            >
-              <div className="mb-3 text-left">
-                <label className="block text-[15px] font-semibold text-slate-800">
-                  {param.label}
-                </label>
-                {param.description && (
-                  <p className="text-[13px] text-slate-500 mt-0.5">
-                    {param.description}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {param.options.map((opt) => {
-                  const isSelected = selections[param.key] === opt.points;
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() =>
-                        setSelections((prev) => ({
-                          ...prev,
-                          [param.key]: opt.points,
-                        }))
-                      }
-                      className={`flex-1 min-w-[120px] px-4 py-2 border rounded-md text-sm font-medium transition-all select-none
-                        ${
-                          isSelected
-                            ? "bg-[#E91E63] border-[#E91E63] text-white shadow-md ring-2 ring-[#E91E63]/20"
-                            : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
-                        }`}
-                    >
-                      {opt.label}
-                      {isSelected && (
-                        <span className="block text-xs mt-0.5 opacity-80">
-                          (+{opt.points})
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <CardContent className="py-12 flex flex-col items-center">
+          <div className="flex flex-col sm:flex-row justify-center gap-6 w-full max-w-lg px-4">
+            {SCORE_CONFIG.parameters[0].options.map((opt) => {
+              const isSelected = selections.cognitiveSeverity === opt.points;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() =>
+                    setSelections({
+                      cognitiveSeverity: opt.points,
+                    })
+                  }
+                  className={`flex-1 py-8 px-6 border-2 rounded-xl text-3xl font-bold transition-all select-none cursor-pointer text-center flex items-center justify-center min-h-[120px]
+                    ${
+                      isSelected
+                        ? "bg-[#E91E63] border-[#E91E63] text-white shadow-xl ring-4 ring-[#E91E63]/25 scale-[1.02]"
+                        : "bg-white text-slate-700 border-slate-300 hover:border-pink-300 hover:bg-slate-50"
+                    }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
 
         <CardFooter className="flex-col items-stretch space-y-2">
           {!allAnswered && (
             <div className="mb-2 text-center">
               <p className="px-4 py-3 bg-[#fef2f2] text-[#e11d48] border border-[#fecaca] rounded-lg text-[15px] font-medium shadow-sm">
-                Please complete all selections to calculate the risk score.
+                Please select an EEG finding to proceed.
               </p>
             </div>
           )}
-
-          {allAnswered && !isEligible && (
-            <div className="mb-2 text-center animate-fade-in-up">
-              <p className="px-4 py-3 bg-[#fff1f2] text-[#be123c] border border-[#fda4af] rounded-lg text-[15px] font-bold shadow-sm">
-                ⚠️ Patient is ineligible for randomization (Requires score ≥{" "}
-                {SCORE_CONFIG.minimumScoreForRandomization}).
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-lg p-6 w-full mb-4">
-            <span className="text-lg font-bold text-slate-700 tracking-wider">
-              Total Risk Score
-            </span>
-            <div className="flex flex-col items-end">
-              <span
-                className={`text-[40px] leading-none font-black ${totalScore > 0 ? "text-[#E91E63]" : "text-slate-300"}`}
-              >
-                {totalScore}
-              </span>
-              {allAnswered && (
-                <span
-                  className={`text-sm font-bold mt-1 ${isEligible ? "text-[#E91E63]" : "text-slate-400"}`}
-                >
-                  {getStratificationLabel()}
-                </span>
-              )}
-            </div>
-          </div>
 
           <div className="flex items-center justify-between w-full">
             <button

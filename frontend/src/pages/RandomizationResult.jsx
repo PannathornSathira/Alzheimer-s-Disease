@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { usePatient } from '../context/PatientContext';
+import { STUDY_CONFIG } from '../config/studyConfig';
 
 export function RandomizationResult() {
   const navigate = useNavigate();
@@ -39,6 +40,9 @@ export function RandomizationResult() {
   }
 
   const isIntervention = patientData.assignedArm?.includes('Drug') || patientData.assignedArm?.includes('Levetiracetam');
+  const displayArm = isIntervention 
+    ? (STUDY_CONFIG.displayArms?.intervention || 'A')
+    : (STUDY_CONFIG.displayArms?.placebo || 'B');
 
   return (
     <Card className="shadow-2xl border-primary ring-1 ring-primary/20 mt-8 animate-fade-in-up">
@@ -56,14 +60,10 @@ export function RandomizationResult() {
         </p>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-2 gap-4 w-full max-w-lg mb-8">
+        <div className="w-full max-w-lg mb-8">
           <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
             <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">System ID</p>
             <p className="text-lg font-bold text-slate-800">{patientData.systemId}</p>
-          </div>
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Risk Score</p>
-            <p className="text-lg font-bold text-slate-800">{patientData.totalScore} Points</p>
           </div>
         </div>
 
@@ -75,7 +75,7 @@ export function RandomizationResult() {
           }`}
         >
           <p className={`text-sm font-semibold uppercase tracking-widest mb-2 ${isIntervention ? 'text-primary-light' : 'text-blue-400'}`}>Assigned Arm</p>
-          <p className="text-4xl md:text-5xl font-black tracking-tight">{patientData.assignedArm}</p>
+          <p className="text-6xl md:text-7xl font-black tracking-tight">{displayArm}</p>
         </div>
 
         <Button size="lg" variant={isIntervention ? "primary" : "secondary"} className="w-full max-w-sm font-semibold" onClick={handleFinish}>

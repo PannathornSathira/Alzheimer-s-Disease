@@ -1,6 +1,6 @@
 import React from 'react';
 
-const STEP_LABELS = ['Registration', 'Inclusion', 'Exclusion', 'Pause', 'Score Assessment', 'Randomization'];
+const STEP_LABELS = ['Registration', 'Inclusion', 'Exclusion', 'Pending EEG monitoring', 'EEG finding', 'Randomization'];
 
 export function ProgressBar({ currentStep, totalSteps = 6 }) {
   const steps = Array.from({ length: totalSteps }, (_, i) => i + 1);

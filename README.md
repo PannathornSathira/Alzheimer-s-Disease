@@ -73,4 +73,13 @@ export default defineConfig([
   },
 ])
 ```
-# Alzheimer-Disease-Research
+# Alzheimer's Disease Trial Randomization System (Mockup)
+
+This repository contains the clinical trial enrollment and randomization system adapted for the **Early-Onset Alzheimer's Disease** study.
+
+> [!NOTE]
+> **Workflow Mockup Status**
+> - The frontend interface has been updated to demonstrate the target clinical workflow to the customers.
+> - The scoring assessment has been simplified to only capture the presence of **Subclinical Epileptiform Activity (SEA)** vs **No SEA** to perform stratification.
+> - The randomization results are blinded to display proxy letters (**A** or **B**) instead of the actual drug/placebo names.
+> - **Backend / API Integrity**: The backend integration remains on a simplified mock stage. A full production-grade backend and database schema adjustments for these revised inputs will be fully developed and integrated later once the client aligns on this workflow design.

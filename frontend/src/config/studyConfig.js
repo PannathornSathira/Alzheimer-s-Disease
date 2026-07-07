@@ -1,7 +1,7 @@
 export const STUDY_CONFIG = {
   title: "Efficacy of Low-Dose Levetiracetam on Cognitive Function in Patients with Early-Onset Alzheimer's Disease",
   subtitle: "A Randomized Controlled Trial",
-  shortName: "Alzheimer-LEV Trial",
+  shortName: "AD-SPIKE-LEV TRIAL",
 
   // Randomization arms
   arms: {
@@ -9,16 +9,23 @@ export const STUDY_CONFIG = {
     placebo: "Placebo Arm",
   },
 
+  // Blinding codes for display
+  displayArms: {
+    intervention: "A",
+    placebo: "B",
+  },
+
   // Participating hospitals — add/remove/edit freely
   hospitals: [
     { prefix: "KCMH", name: "King Chulalongkorn Memorial Hospital" },
-    { prefix: "BCH",  name: "Buddhachinaraj Hospital" },
-    { prefix: "SWU",  name: "Faculty of Medicine, Srinakharinwirot University" },
-    { prefix: "MNR",  name: "Maharat Nakhon Ratchasima Hospital" },
-    { prefix: "CPA",  name: "Chao Phraya Abhaibhubejhr Hospital" },
-    { prefix: "SRN",  name: "Surin Hospital" },
-    { prefix: "QSV",  name: "Somdej Na Si Racha Hospital" },
-    { prefix: "CBH",  name: "Chulabhorn Hospital" },
+    /*
+    { prefix: "BCH", name: "Buddhachinaraj Hospital" },
+    { prefix: "SWU", name: "Faculty of Medicine, Srinakharinwirot University" },
+    { prefix: "MNR", name: "Maharat Nakhon Ratchasima Hospital" },
+    { prefix: "CPA", name: "Chao Phraya Abhaibhubejhr Hospital" },
+    { prefix: "SRN", name: "Surin Hospital" },
+    { prefix: "QSV", name: "Somdej Na Si Racha Hospital" },
+    { prefix: "CBH", name: "Chulabhorn Hospital" }, */
   ],
 
   // Status flow labels

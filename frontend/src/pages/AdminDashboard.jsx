@@ -31,6 +31,13 @@ const Badge = ({ variant, className = "", children }) => {
   );
 };
 
+const formatArm = (armName) => {
+  if (!armName) return "N/A";
+  if (armName.includes("Drug") || armName.includes("Levetiracetam")) return "A";
+  if (armName.includes("Placebo")) return "B";
+  return armName;
+};
+
 export function AdminDashboard() {
   const navigate = useNavigate();
   const adminRole = sessionStorage.getItem("adminRole") || "superadmin";
@@ -69,7 +76,7 @@ export function AdminDashboard() {
       r.id,
       r.hospital,
       r.hn,
-      isBlinded ? "Randomized" : r.arm || "N/A",
+      isBlinded ? "Randomized" : formatArm(r.arm),
       r.score || "N/A",
       r.timestamps.rand,
     ]);
@@ -360,13 +367,13 @@ export function AdminDashboard() {
               bg: "bg-[#fce4ec]",
             },
             {
-              label: STUDY_CONFIG.arms.intervention,
+              label: "Arm A",
               value: stats.drugArm,
               c: "text-[#0f172a]",
               bg: "bg-slate-100",
             },
             {
-              label: STUDY_CONFIG.arms.placebo,
+              label: "Arm B",
               value: stats.placeboArm,
               c: "text-[#0f172a]",
               bg: "bg-slate-100",
@@ -605,7 +612,7 @@ export function AdminDashboard() {
                             <div className="text-[11px] font-semibold text-slate-700 bg-slate-100 py-0.5 px-2 rounded whitespace-nowrap inline-flex items-center gap-1">
                               {adminRole !== "blindedadmin" && (
                                 <>
-                                  <span>{row.arm}</span>
+                                  <span>Arm {formatArm(row.arm)}</span>
                                   <span className="opacity-30">|</span>
                                 </>
                               )}

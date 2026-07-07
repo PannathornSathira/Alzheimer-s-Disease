@@ -84,7 +84,7 @@ export function ArmAllocationChart({ liveData, intArmTotal, placArmTotal }) {
               }`}
             >
               <span className="w-3 h-0.5 bg-current inline-block rounded-full"></span>
-              Drug Arm ({intArmTotal})
+              Arm A ({intArmTotal})
             </button>
             <button
               onClick={() => { toggleLine('ArmB'); setSelectedArm('Placebo'); }}
@@ -95,7 +95,7 @@ export function ArmAllocationChart({ liveData, intArmTotal, placArmTotal }) {
               }`}
             >
               <span className="w-3 h-0.5 bg-current inline-block rounded-full"></span>
-              Placebo Arm ({placArmTotal})
+              Arm B ({placArmTotal})
             </button>
           </div>
         </div>
@@ -355,8 +355,8 @@ export function ArmAllocationChart({ liveData, intArmTotal, placArmTotal }) {
                           </g>
                         );
                       })}
-                      {renderBar(intSegs,  intTotal,  intBarX,  'Drug Arm', '#3b82f6')}
-                      {renderBar(placSegs, placTotal, placBarX, 'Placebo Arm',      '#8b5cf6')}
+                      {renderBar(intSegs,  intTotal,  intBarX,  'Arm A', '#3b82f6')}
+                      {renderBar(placSegs, placTotal, placBarX, 'Arm B',      '#8b5cf6')}
                     </svg>
                   </div>
                   {/* Legend */}
@@ -388,7 +388,7 @@ export function ArmAllocationChart({ liveData, intArmTotal, placArmTotal }) {
                         ? 'bg-blue-500 text-white shadow-sm'
                         : 'text-slate-500 hover:text-slate-700'
                     }`}
-                  >Drug Arm</button>
+                  >Arm A</button>
                   <button
                     onClick={() => setSelectedArm('Placebo')}
                     className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
@@ -396,7 +396,7 @@ export function ArmAllocationChart({ liveData, intArmTotal, placArmTotal }) {
                         ? 'bg-violet-500 text-white shadow-sm'
                         : 'text-slate-500 hover:text-slate-700'
                     }`}
-                  >Placebo Arm</button>
+                  >Arm B</button>
                 </div>
                 <span className="text-xs text-slate-400 font-medium">
                   {activeSite ? `Site: ${activeSite}` : 'All sites'} —{' '}
