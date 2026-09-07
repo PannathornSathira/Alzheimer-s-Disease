@@ -3,18 +3,6 @@ export const STUDY_CONFIG = {
   subtitle: "A Randomized Controlled Trial",
   shortName: "AD-SPIKE-LEV TRIAL",
 
-  // Randomization arms
-  arms: {
-    intervention: "Drug Arm (Levetiracetam)",
-    placebo: "Placebo Arm",
-  },
-
-  // Blinding codes for display
-  displayArms: {
-    intervention: "A",
-    placebo: "B",
-  },
-
   // Participating hospitals — add/remove/edit freely
   hospitals: [
     { prefix: "KCMH", name: "King Chulalongkorn Memorial Hospital" },
@@ -34,7 +22,6 @@ export const STUDY_CONFIG = {
     INCLUSION_PASSED: "Passed Inclusion",
     EXCLUSION_PASSED: "Passed Exclusion",
     PAUSED: "Paused (Awaiting Return)",      // ⬅️ NEW status
-    SCORED: "Score Assessed",                 // ⬅️ NEW status  
     RANDOMIZED: "Randomized",
     DISQUALIFIED: "Disqualified",
   },

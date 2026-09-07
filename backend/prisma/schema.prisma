@@ -8,6 +8,16 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum EEGGroup {
+  SEA
+  NO_SEA
+}
+
+enum AllocationCode {
+  A
+  B
+}
+
 model Hospital {
   id       Int            @id @default(autoincrement())
   prefix   String         @unique
@@ -46,7 +56,7 @@ model TrialSession {
   userId                     Int
 
   // Status Tracking
-  // REGISTERED → INCLUSION_PASSED → EXCLUSION_PASSED → PAUSED → SCORED → RANDOMIZED
+  // REGISTERED → INCLUSION_PASSED → EXCLUSION_PASSED → PAUSED → RANDOMIZED
   // Any step can → DISQUALIFIED
   currentStatus              String    @default("REGISTERED")
 
@@ -56,7 +66,7 @@ model TrialSession {
   exclusionPageTimestamp      DateTime? @db.Timestamptz()
   pauseTimestamp             DateTime? @db.Timestamptz()    // ⬅️ NEW
   resumeTimestamp            DateTime? @db.Timestamptz()    // ⬅️ NEW
-  scoreTimestamp             DateTime? @db.Timestamptz()
+  eegGroupTimestamp          DateTime? @db.Timestamptz()
   randomizationTimestamp     DateTime? @db.Timestamptz()
 
   // Criteria Results
@@ -64,19 +74,14 @@ model TrialSession {
   exclusionPassed            Boolean?
   failedReason               String?
 
-  // Assessment Score (dynamic — field names from scoreConfig keys)
-  cognitiveSeverityScore     Int?
-  vascularRiskScore          Int?
-  behavioralSymptomsScore    Int?
-  functionalImpairmentScore  Int?
-  familyHistoryScore         Int?
-  totalScore                 Int?
-  strata                     String?   // 'Moderate Risk' or 'High/Very High Risk'
-
-  // Randomization Result
-  allocationResult           String?   // 'Drug Arm (Levetiracetam)' or 'Placebo Arm'
+  // Doctor-selected EEG group and central allocation code
+  eegGroup                   EEGGroup?
+  allocationCode             AllocationCode?
+  allocationSequence         Int?
 
   // Relations
   hospital                   Hospital  @relation(fields: [hospitalId], references: [id])
   user                       User      @relation(fields: [userId], references: [id])
+
+  @@unique([eegGroup, allocationSequence])
 }

@@ -22,7 +22,7 @@ export function Registration() {
     // Convert patient HN by removing slashes, dashes, spaces, and leading zeros
     const cleanHn = hn
       .trim()
-      .replace(/[\/\-\s]/g, "")
+      .replace(/[/\-\s]/g, "")
       .replace(/^0+/, "");
     const hospitalObj = STUDY_CONFIG.hospitals.find(
       (h) => h.prefix === selectedHospital,
@@ -45,13 +45,8 @@ export function Registration() {
           hospital: hospitalObj.name,
           inclusionPass: s.inclusionPassed,
           exclusionPass: s.exclusionPassed,
-          totalScore: s.totalScore,
-          assignedArm: s.allocationResult,
-          cognitiveSeverityScore: s.cognitiveSeverityScore,
-          vascularRiskScore: s.vascularRiskScore,
-          behavioralSymptomsScore: s.behavioralSymptomsScore,
-          functionalImpairmentScore: s.functionalImpairmentScore,
-          familyHistoryScore: s.familyHistoryScore,
+          eegGroup: s.eegGroup,
+          allocationCode: s.allocationCode,
         };
 
         const isComplete =
@@ -81,13 +76,8 @@ export function Registration() {
         inclusionPass: false,
         exclusionPass: false,
         paused: false,
-        totalScore: null,
-        assignedArm: null,
-        cognitiveSeverityScore: null,
-        vascularRiskScore: null,
-        behavioralSymptomsScore: null,
-        functionalImpairmentScore: null,
-        familyHistoryScore: null,
+        eegGroup: null,
+        allocationCode: null,
       }));
 
       navigate("/inclusion");
@@ -112,11 +102,6 @@ export function Registration() {
     else if (status === "EXCLUSION_PASSED" || status === "PAUSED")
       navigate("/pause");
     else navigate("/");
-  };
-
-  const handleEditCriteria = () => {
-    setPatientData((prev) => ({ ...prev, ...resumeSessionData }));
-    navigate("/inclusion");
   };
 
   const isFormValid = hn.trim() && selectedHospital;

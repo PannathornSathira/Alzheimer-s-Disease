@@ -38,13 +38,8 @@ export function PausePage() {
       inclusionPass: false,
       exclusionPass: false,
       paused: false,
-      totalScore: null,
-      assignedArm: null,
-      cognitiveSeverityScore: null,
-      vascularRiskScore: null,
-      behavioralSymptomsScore: null,
-      functionalImpairmentScore: null,
-      familyHistoryScore: null,
+      eegGroup: null,
+      allocationCode: null,
     });
     navigate("/");
   };

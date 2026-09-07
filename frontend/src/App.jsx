@@ -22,15 +22,8 @@ export default function App() {
     inclusionPass: false,
     exclusionPass: false,
     paused: false,
-    totalScore: null,
-    assignedArm: null,
-    
-    // Scoring parameters (dynamic fields matching scoreConfig keys)
-    cognitiveSeverityScore: null,
-    vascularRiskScore: null,
-    behavioralSymptomsScore: null,
-    functionalImpairmentScore: null,
-    familyHistoryScore: null,
+    eegGroup: null,
+    allocationCode: null,
   });
 
   return (

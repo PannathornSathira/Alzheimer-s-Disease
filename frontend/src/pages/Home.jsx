@@ -45,7 +45,7 @@ export function Home() {
             <h3 className="text-[24px] font-bold text-slate-900 mb-3 tracking-tight">Register Patient / Continue Filling Patient</h3>
 
             <p className="text-[#64748B] text-[15px] leading-relaxed mb-6 px-2 font-normal flex-grow">
-              Initiate or Continue a patient registration, perform criteria checks, and calculate score for arm assignment.
+              Initiate or continue a patient registration, complete screening, select the EEG group, and receive a randomization code.
             </p>
 
             <Button

@@ -1,338 +1,182 @@
 const prisma = require('../db/prismaClient');
-const fs = require('fs');
-const path = require('path');
+const { getAllocationList } = require('../randomList');
 
 const STATUS_PRIORITY = {
-    'REGISTERED': 0,
-    'INCLUSION_PASSED': 1,
-    'EXCLUSION_PASSED': 2,
-    'PAUSED': 3,
-    'SCORED': 4,
-    'RANDOMIZED': 5,
-    'DISQUALIFIED': 6
+    REGISTERED: 0,
+    INCLUSION_PASSED: 1,
+    EXCLUSION_PASSED: 2,
+    PAUSED: 3,
+    RANDOMIZED: 4,
+    DISQUALIFIED: 5
 };
 
-function getNextStatus(current, target) {
-    if ((STATUS_PRIORITY[target] || 0) > (STATUS_PRIORITY[current] || 0)) {
-        return target;
+class RequestError extends Error {
+    constructor(status, message) {
+        super(message);
+        this.status = status;
     }
-    return current;
 }
 
-// 1. POST /api/sessions/start
+function getNextStatus(current, target) {
+    return (STATUS_PRIORITY[target] || 0) > (STATUS_PRIORITY[current] || 0) ? target : current;
+}
+
+function normalizeHN(value) {
+    return value.trim().replace(/[\/\-\s]/g, '').replace(/^0+/, '');
+}
+
 exports.startSession = async (req, res) => {
     try {
         const { hospitalPrefix, hospitalName, userId, uniqueId } = req.body;
-        
-        if (!hospitalPrefix) {
-            return res.status(400).json({ error: 'hospitalPrefix is required' });
-        }
-        if (!uniqueId) {
-            return res.status(400).json({ error: 'uniqueId is required' });
-        }
+        if (!hospitalPrefix || !uniqueId) return res.status(400).json({ error: 'hospitalPrefix and uniqueId are required' });
 
-        // Standardize HN by stripping /, -, spaces, and leading zeros
-        const cleanUniqueId = uniqueId.trim().replace(/[\/\-\s]/g, '').replace(/^0+/, '');
+        const hn = normalizeHN(uniqueId);
+        if (!hn) return res.status(400).json({ error: 'uniqueId is required' });
 
-        // Find or create hospital by prefix
         let hospital = await prisma.hospital.findUnique({ where: { prefix: hospitalPrefix } });
-        if (!hospital) {
-            hospital = await prisma.hospital.create({
-                data: { prefix: hospitalPrefix, name: hospitalName || hospitalPrefix }
-            });
-        }
-        
-        // Use provided userId or a dummy user (create if needed)
+        if (!hospital) hospital = await prisma.hospital.create({ data: { prefix: hospitalPrefix, name: hospitalName || hospitalPrefix } });
+
         let actualUserId = userId;
         if (!actualUserId) {
-            let dummyUser = await prisma.user.findFirst();
-            if (!dummyUser) {
-                dummyUser = await prisma.user.create({
-                    data: { role: 'admin', hospitalId: hospital.id }
-                });
-            }
-            actualUserId = dummyUser.id;
+            let user = await prisma.user.findFirst({ where: { hospitalId: hospital.id } });
+            if (!user) user = await prisma.user.create({ data: { role: 'doctor', hospitalId: hospital.id } });
+            actualUserId = user.id;
         }
 
-        // Find or create Patient
-        let patient = await prisma.patient.findUnique({
-            where: {
-                hospitalId_hn: {
-                    hospitalId: hospital.id,
-                    hn: cleanUniqueId
-                }
-            }
-        });
+        let patient = await prisma.patient.findUnique({ where: { hospitalId_hn: { hospitalId: hospital.id, hn } } });
+        if (!patient) patient = await prisma.patient.create({ data: { hn, hospitalId: hospital.id } });
 
-        if (!patient) {
-            patient = await prisma.patient.create({
-                data: {
-                    hn: cleanUniqueId,
-                    hospitalId: hospital.id
-                }
-            });
-        }
-
-        // Check for existing session using Patient ID
         const existingSession = await prisma.trialSession.findFirst({
-            where: {
-                hospitalId: hospital.id,
-                patientId: patient.id
-            },
-            orderBy: {
-                registrationTimestamp: 'desc'
-            }
+            where: { hospitalId: hospital.id, patientId: patient.id },
+            orderBy: { registrationTimestamp: 'desc' }
         });
+        if (existingSession) return res.json({ message: 'Existing session found', session: existingSession, isExisting: true });
 
-        if (existingSession) {
-            return res.status(200).json({ 
-                message: 'Existing session found', 
-                session: existingSession,
-                isExisting: true
-            });
-        }
-
-        // Generate a sequential Trial System ID (e.g., KCMH-001, KCMH-002)
-        const existingCount = await prisma.trialSession.count({
-            where: { hospitalId: hospital.id }
+        const existingCount = await prisma.trialSession.count({ where: { hospitalId: hospital.id } });
+        const trialSystemId = `${hospital.prefix}-${String(existingCount + 1).padStart(3, '0')}`;
+        const session = await prisma.trialSession.create({
+            data: { trialSystemId, patientId: patient.id, hospitalId: hospital.id, userId: actualUserId }
         });
-
-        let trialSystemId;
-        let newSession;
-        for (let attempt = 1; attempt <= 10; attempt++) {
-            const sequentialNumber = existingCount + attempt;
-            const paddedNumber = String(sequentialNumber).padStart(3, '0');
-            trialSystemId = `${hospital.prefix}-${paddedNumber}`;
-
-            // Check if already taken
-            const existing = await prisma.trialSession.findUnique({ where: { trialSystemId } });
-            if (existing) {
-                if (attempt === 10) {
-                    return res.status(500).json({ error: 'Could not generate a unique Trial ID after multiple attempts. Please try again or contact support.' });
-                }
-                continue;
-            }
-
-            newSession = await prisma.trialSession.create({
-                data: {
-                    trialSystemId,
-                    patientId: patient.id,
-                    hospitalId: hospital.id,
-                    userId: actualUserId,
-                    currentStatus: 'REGISTERED'
-                }
-            });
-            break; // success
-        }
-        
-        res.status(201).json({ message: 'Session started successfully', session: newSession });
+        res.status(201).json({ message: 'Session started successfully', session });
     } catch (error) {
         console.error('Start session error:', error);
         res.status(500).json({ error: 'Failed to start session' });
     }
 };
 
-// 2. POST /api/sessions/:id/inclusion
 exports.submitInclusion = async (req, res) => {
     try {
         const { id } = req.params;
         const { passed, failedReason } = req.body;
-        
-        const currentSession = await prisma.trialSession.findUnique({ where: { id } });
-        if (!currentSession) return res.status(404).json({ error: 'Session not found' });
-        
-        const targetStatus = passed ? 'INCLUSION_PASSED' : 'DISQUALIFIED';
+        if (typeof passed !== 'boolean') return res.status(400).json({ error: 'passed must be a boolean' });
+        const current = await prisma.trialSession.findUnique({ where: { id } });
+        if (!current) return res.status(404).json({ error: 'Session not found' });
 
-        const updatedSession = await prisma.trialSession.update({
+        const session = await prisma.trialSession.update({
             where: { id },
             data: {
                 inclusionPassed: passed,
-                failedReason: passed ? null : failedReason,
+                failedReason: passed ? null : (failedReason || 'Inclusion Failed'),
                 inclusionPageTimestamp: new Date(),
-                currentStatus: getNextStatus(currentSession.currentStatus, targetStatus)
+                currentStatus: getNextStatus(current.currentStatus, passed ? 'INCLUSION_PASSED' : 'DISQUALIFIED')
             }
         });
-        
-        res.json({ message: 'Inclusion criteria updated', session: updatedSession });
+        res.json({ message: 'Inclusion criteria updated', session });
     } catch (error) {
         console.error('Inclusion error:', error);
         res.status(500).json({ error: 'Failed to update inclusion criteria' });
     }
 };
 
-// 3. POST /api/sessions/:id/exclusion
 exports.submitExclusion = async (req, res) => {
     try {
         const { id } = req.params;
         const { conditions } = req.body;
-        
-        // 11 criteria check. All must be false/absent to pass.
-        const anyFailed = Object.values(conditions).some(val => val === true);
-        
-        const currentSession = await prisma.trialSession.findUnique({ where: { id } });
-        if (!currentSession) return res.status(404).json({ error: 'Session not found' });
+        if (!conditions || typeof conditions !== 'object') return res.status(400).json({ error: 'conditions are required' });
+        const current = await prisma.trialSession.findUnique({ where: { id } });
+        if (!current) return res.status(404).json({ error: 'Session not found' });
 
-        const targetStatus = anyFailed ? 'DISQUALIFIED' : 'EXCLUSION_PASSED';
-        
-        const updatedSession = await prisma.trialSession.update({
+        const failed = Object.values(conditions).some((value) => value === true);
+        const session = await prisma.trialSession.update({
             where: { id },
             data: {
-                exclusionPassed: !anyFailed,
-                failedReason: anyFailed ? 'Exclusion Failed' : null,
+                exclusionPassed: !failed,
+                failedReason: failed ? 'Exclusion Failed' : null,
                 exclusionPageTimestamp: new Date(),
-                currentStatus: getNextStatus(currentSession.currentStatus, targetStatus)
+                currentStatus: getNextStatus(current.currentStatus, failed ? 'DISQUALIFIED' : 'EXCLUSION_PASSED')
             }
         });
-        
-        res.json({ message: 'Exclusion criteria updated', session: updatedSession });
+        res.json({ message: 'Exclusion criteria updated', session });
     } catch (error) {
         console.error('Exclusion error:', error);
         res.status(500).json({ error: 'Failed to update exclusion criteria' });
     }
 };
 
-// 4. POST /api/sessions/:id/pause
 exports.pauseSession = async (req, res) => {
     try {
-        const { id } = req.params;
-        
-        const currentSession = await prisma.trialSession.findUnique({ where: { id } });
-        if (!currentSession) return res.status(404).json({ error: 'Session not found' });
-        
-        const updatedSession = await prisma.trialSession.update({
-            where: { id },
-            data: {
-                pauseTimestamp: new Date(),
-                currentStatus: getNextStatus(currentSession.currentStatus, 'PAUSED')
-            }
+        const current = await prisma.trialSession.findUnique({ where: { id: req.params.id } });
+        if (!current) return res.status(404).json({ error: 'Session not found' });
+        const session = await prisma.trialSession.update({
+            where: { id: current.id },
+            data: { pauseTimestamp: new Date(), currentStatus: getNextStatus(current.currentStatus, 'PAUSED') }
         });
-        
-        res.json({ message: 'Session paused', session: updatedSession });
+        res.json({ message: 'Session paused', session });
     } catch (error) {
         console.error('Pause error:', error);
         res.status(500).json({ error: 'Failed to pause session' });
     }
 };
 
-// 5. POST /api/sessions/:id/resume
 exports.resumeSession = async (req, res) => {
     try {
-        const { id } = req.params;
-        
-        const currentSession = await prisma.trialSession.findUnique({ where: { id } });
-        if (!currentSession) return res.status(404).json({ error: 'Session not found' });
-        
-        const updatedSession = await prisma.trialSession.update({
-            where: { id },
-            data: {
-                resumeTimestamp: new Date()
-            }
-        });
-        
-        res.json({ message: 'Session resumed', session: updatedSession });
+        const current = await prisma.trialSession.findUnique({ where: { id: req.params.id } });
+        if (!current) return res.status(404).json({ error: 'Session not found' });
+        const session = await prisma.trialSession.update({ where: { id: current.id }, data: { resumeTimestamp: new Date() } });
+        res.json({ message: 'Session resumed', session });
     } catch (error) {
         console.error('Resume error:', error);
         res.status(500).json({ error: 'Failed to resume session' });
     }
 };
 
-// 6. POST /api/sessions/:id/score (or select-score)
-exports.submitScore = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const {
-            cognitiveSeverityScore,
-            vascularRiskScore,
-            behavioralSymptomsScore,
-            functionalImpairmentScore,
-            familyHistoryScore
-        } = req.body;
-        
-        const currentSession = await prisma.trialSession.findUnique({ where: { id } });
-        if (!currentSession) return res.status(404).json({ error: 'Session not found' });
+exports.randomizeSession = async (req, res) => {
+    const { id } = req.params;
+    const { eegGroup } = req.body;
+    const list = getAllocationList(eegGroup);
+    if (!list) return res.status(400).json({ error: 'eegGroup must be SEA or NO_SEA' });
 
-        // Calculate the score sum automatically
-        const totalScore = (cognitiveSeverityScore || 0) + 
-                           (vascularRiskScore || 0) + 
-                           (behavioralSymptomsScore || 0) + 
-                           (functionalImpairmentScore || 0) + 
-                           (familyHistoryScore || 0);
-        
-        // Strata selection based on config thresholds:
-        // Score < 4 -> Low Risk (Ineligible)
-        // Score 4-5 -> Moderate Risk
-        // Score 6-9 -> High/Very High Risk
-        let strata = 'Low Risk (Ineligible)';
-        let eligible = false;
-        
-        if (totalScore >= 6) {
-            strata = 'High/Very High Risk';
-            eligible = true;
-        } else if (totalScore >= 4) {
-            strata = 'Moderate Risk';
-            eligible = true;
-        }
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+            const session = await prisma.$transaction(async (tx) => {
+                const current = await tx.trialSession.findUnique({ where: { id } });
+                if (!current) throw new RequestError(404, 'Session not found');
+                if (current.allocationCode) return current;
+                if (!current.exclusionPassed || current.currentStatus === 'DISQUALIFIED') {
+                    throw new RequestError(409, 'Only patients who pass exclusion screening can be randomized');
+                }
 
-        const targetStatus = eligible ? 'RANDOMIZED' : 'DISQUALIFIED';
-        let finalAssignedArm = null;
+                const assignedCount = await tx.trialSession.count({ where: { eegGroup, allocationCode: { not: null } } });
+                if (assignedCount >= list.length) throw new RequestError(409, `The ${eegGroup} allocation list is exhausted`);
 
-        if (targetStatus === 'RANDOMIZED') {
-            if (currentSession.allocationResult && currentSession.strata === strata) {
-                // Keep the same arm if already randomized in this stratum
-                finalAssignedArm = currentSession.allocationResult;
-            } else {
-                // Count how many prior sessions were randomized into this stratum
-                const existingCount = await prisma.trialSession.count({
-                    where: {
-                        strata: strata,
-                        allocationResult: { not: null }
+                return tx.trialSession.update({
+                    where: { id },
+                    data: {
+                        eegGroup,
+                        allocationCode: list[assignedCount],
+                        allocationSequence: assignedCount + 1,
+                        eegGroupTimestamp: new Date(),
+                        randomizationTimestamp: new Date(),
+                        currentStatus: 'RANDOMIZED'
                     }
                 });
-
-                let fileName = null;
-                if (strata === 'Moderate Risk') {
-                    fileName = 'DrugArmBased.csv';
-                } else if (strata === 'High/Very High Risk') {
-                    fileName = 'PlaceboArmBased.csv';
-                }
-
-                if (fileName) {
-                    const filePath = path.join(__dirname, '../randomList', fileName);
-                    const fileContent = fs.readFileSync(filePath, 'utf8');
-                    const lines = fileContent.trim().split('\n').filter(line => line.trim().length > 0).slice(1);
-                    
-                    if (lines.length > 0) {
-                        const idx = existingCount % lines.length;
-                        const cols = lines[idx].split(',');
-                        if (cols.length >= 2) {
-                            finalAssignedArm = cols[1].replace('\r', '').trim();
-                        }
-                    }
-                }
-            }
+            }, { isolationLevel: 'Serializable' });
+            return res.json({ message: 'EEG group saved and patient randomized', session });
+        } catch (error) {
+            if (error instanceof RequestError) return res.status(error.status).json({ error: error.message });
+            if ((error.code === 'P2034' || error.code === 'P2002') && attempt < 2) continue;
+            console.error('Randomization error:', error);
+            return res.status(500).json({ error: 'Failed to randomize session' });
         }
-        
-        const updatedSession = await prisma.trialSession.update({
-            where: { id },
-            data: {
-                cognitiveSeverityScore,
-                vascularRiskScore,
-                behavioralSymptomsScore,
-                functionalImpairmentScore,
-                familyHistoryScore,
-                totalScore,
-                strata,
-                failedReason: eligible ? null : 'Score Too Low',
-                allocationResult: finalAssignedArm,
-                scoreTimestamp: new Date(),
-                ...(targetStatus === 'RANDOMIZED' && !currentSession.randomizationTimestamp ? { randomizationTimestamp: new Date() } : {}),
-                currentStatus: getNextStatus(currentSession.currentStatus, targetStatus)
-            }
-        });
-        
-        res.json({ message: 'Score saved and randomized', session: updatedSession });
-    } catch (error) {
-        console.error('Score selection error:', error);
-        res.status(500).json({ error: 'Failed to submit score' });
     }
 };

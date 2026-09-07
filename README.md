@@ -1,85 +1,23 @@
-# React + TypeScript + Vite
+# Alzheimer EEG-Group Randomization System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Local clinical-trial screening and randomization workflow. Doctors select `SEA` or `No SEA`; the backend assigns the next blinded code from that group’s approved A/B sequence.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cd backend && npm install && cp .env.example .env && cd ..
+npm run db:up
+npm run db:migrate
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open `http://localhost:5173`. The API runs at `http://localhost:10000` and PostgreSQL runs in Docker on port `5432`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Allocation lists
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-# Alzheimer's Disease Trial Randomization System (Mockup)
+- `backend/randomList/sea.csv` and `backend/randomList/no-sea.csv` are the runtime lists. They contain codes A/B only.
+- The source and converted Excel files in `Random/` stay local and are ignored by Git.
+- Each group has 34 allocations, with 17 A and 17 B. The application never reuses a list after it is exhausted.
 
-This repository contains the clinical trial enrollment and randomization system adapted for the **Early-Onset Alzheimer's Disease** study.
-
-> [!NOTE]
-> **Workflow Mockup Status**
-> - The frontend interface has been updated to demonstrate the target clinical workflow to the customers.
-> - The scoring assessment has been simplified to only capture the presence of **Subclinical Epileptiform Activity (SEA)** vs **No SEA** to perform stratification.
-> - The randomization results are blinded to display proxy letters (**A** or **B**) instead of the actual drug/placebo names.
-> - **Backend / API Integrity**: The backend integration remains on a simplified mock stage. A full production-grade backend and database schema adjustments for these revised inputs will be fully developed and integrated later once the client aligns on this workflow design.
+Run `npm test` to verify the runtime lists.

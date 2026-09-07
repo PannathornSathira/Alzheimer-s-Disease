@@ -8,7 +8,6 @@ router.post('/:id/inclusion', sessionController.submitInclusion);
 router.post('/:id/exclusion', sessionController.submitExclusion);
 router.post('/:id/pause', sessionController.pauseSession);
 router.post('/:id/resume', sessionController.resumeSession);
-router.post('/:id/score', sessionController.submitScore);
-router.post('/:id/select-score', sessionController.submitScore); // Alias to support both configurations
+router.post('/:id/randomize', sessionController.randomizeSession);
 
 module.exports = router;

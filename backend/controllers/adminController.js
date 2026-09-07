@@ -1,122 +1,61 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const formatTime = (timestamp) => timestamp
+    ? new Date(timestamp).toLocaleTimeString('en-US', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })
+    : '-';
+
+const formatDate = (timestamp) => timestamp
+    ? new Date(timestamp).toLocaleString('en-US', { timeZone: 'Asia/Bangkok', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '-';
+
 exports.getDashboardStats = async (req, res) => {
     try {
         const sessions = await prisma.trialSession.findMany({
-            include: {
-                hospital: true,
-                patient: true
-            },
-            orderBy: {
-                registrationTimestamp: 'desc'
-            }
+            include: { hospital: true, patient: true },
+            orderBy: { registrationTimestamp: 'desc' }
         });
+        const stats = { totalRand: 0, armACount: 0, armBCount: 0, seaCount: 0, noSeaCount: 0, failInc: 0, failExc: 0, paused: 0, hospStats: {} };
 
-        // Compute stats for Admin Dashboard
-        let totalRand = 0, drugArm = 0, placeboArm = 0, failInc = 0, failExc = 0, paused = 0;
-        const hospStats = {};
-        // Scores of interest are 4 to 9
-        const scoreFreq = { 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
-        const compStats = { 
-            cognitiveSeverity: 0, 
-            vascularRisk: 0, 
-            behavioralSymptoms: 0, 
-            functionalImpairment: 0, 
-            familyHistory: 0 
-        };
-
-        const formattedData = sessions.map(d => {
-            const hPrefix = d.hospital.prefix;
-            if (!hospStats[hPrefix]) hospStats[hPrefix] = { rand: 0, fail: 0 };
-
-            let displayStatus = 'Registered';
-            
-            if (d.currentStatus === 'RANDOMIZED') {
-                displayStatus = 'Randomized';
-                totalRand++;
-                if (d.allocationResult?.includes('Drug Arm (Levetiracetam)')) drugArm++;
-                else if (d.allocationResult?.includes('Placebo Arm')) placeboArm++;
-                
-                hospStats[hPrefix].rand++;
-                if (d.totalScore >= 4 && d.totalScore <= 9) {
-                    scoreFreq[d.totalScore]++;
-                }
-
-                if (d.cognitiveSeverityScore > 0) compStats.cognitiveSeverity++;
-                if (d.vascularRiskScore > 0) compStats.vascularRisk++;
-                if (d.behavioralSymptomsScore > 0) compStats.behavioralSymptoms++;
-                if (d.functionalImpairmentScore > 0) compStats.functionalImpairment++;
-                if (d.familyHistoryScore > 0) compStats.familyHistory++;
-
-            } else if (d.currentStatus === 'DISQUALIFIED') {
-                if (d.failedReason === 'Inclusion Failed') {
-                    displayStatus = 'Failed Inclusion';
-                    failInc++;
-                } else if (d.failedReason === 'Exclusion Failed') {
-                    displayStatus = 'Failed Exclusion';
-                    failExc++;
-                } else if (d.failedReason === 'Score Too Low') {
-                    displayStatus = 'Failed Exclusion';
-                    failExc++;
-                }
-                hospStats[hPrefix].fail++;
-            } else if (d.currentStatus === 'INCLUSION_PASSED') {
-                displayStatus = 'Passed Inclusion';
-            } else if (d.currentStatus === 'EXCLUSION_PASSED') {
-                displayStatus = 'Passed Exclusion';
-            } else if (d.currentStatus === 'PAUSED') {
-                displayStatus = 'Paused (Awaiting Return)';
-                paused++;
-            }
-
-            // Function to format timestamp safely
-            const formatTime = (ts) => {
-                if (!ts) return '-';
-                return new Date(ts).toLocaleTimeString('en-US', { 
-                    timeZone: 'Asia/Bangkok', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-            };
-
-            const formatDate = (ts) => {
-                if (!ts) return '-';
-                return new Date(ts).toLocaleString('en-US', { 
-                    timeZone: 'Asia/Bangkok', 
-                    month: 'short', 
-                    day: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-            };
+        const data = sessions.map((session) => {
+            const hospital = session.hospital.prefix;
+            if (!stats.hospStats[hospital]) stats.hospStats[hospital] = { rand: 0, fail: 0 };
+            let status = 'Registered';
+            if (session.currentStatus === 'RANDOMIZED') {
+                status = 'Randomized';
+                stats.totalRand += 1;
+                stats.hospStats[hospital].rand += 1;
+                if (session.allocationCode === 'A') stats.armACount += 1;
+                if (session.allocationCode === 'B') stats.armBCount += 1;
+                if (session.eegGroup === 'SEA') stats.seaCount += 1;
+                if (session.eegGroup === 'NO_SEA') stats.noSeaCount += 1;
+            } else if (session.currentStatus === 'DISQUALIFIED') {
+                status = session.failedReason === 'Inclusion Failed' ? 'Failed Inclusion' : 'Failed Exclusion';
+                stats.hospStats[hospital].fail += 1;
+                if (session.failedReason === 'Inclusion Failed') stats.failInc += 1;
+                else stats.failExc += 1;
+            } else if (session.currentStatus === 'INCLUSION_PASSED') status = 'Passed Inclusion';
+            else if (session.currentStatus === 'EXCLUSION_PASSED') status = 'Passed Exclusion';
+            else if (session.currentStatus === 'PAUSED') { status = 'Paused (Awaiting Return)'; stats.paused += 1; }
 
             return {
-                id: d.trialSystemId,
-                hn: d.patient?.hn || 'N/A',
-                hospital: d.hospital.prefix,
-                status: displayStatus,
-                anomaly: 'Normal',
+                id: session.trialSystemId,
+                hn: session.patient.hn,
+                hospital,
+                status,
+                eegGroup: session.eegGroup,
+                allocationCode: session.allocationCode,
                 timestamps: {
-                    start: formatDate(d.registrationTimestamp),
-                    inc: formatTime(d.inclusionPageTimestamp),
-                    exc: formatTime(d.exclusionPageTimestamp),
-                    pause: formatTime(d.pauseTimestamp),
-                    resume: formatTime(d.resumeTimestamp),
-                    rand: formatTime(d.randomizationTimestamp)
-                },
-                score: d.totalScore,
-                arm: d.allocationResult
+                    start: formatDate(session.registrationTimestamp),
+                    inc: formatTime(session.inclusionPageTimestamp),
+                    exc: formatTime(session.exclusionPageTimestamp),
+                    pause: formatTime(session.pauseTimestamp),
+                    resume: formatTime(session.resumeTimestamp),
+                    rand: formatTime(session.randomizationTimestamp)
+                }
             };
         });
-
-        res.status(200).json({
-            stats: {
-                totalRand, drugArm, placeboArm, failInc, failExc, paused, hospStats, scoreFreq, compStats
-            },
-            data: formattedData
-        });
-
+        res.json({ stats, data });
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
         res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
