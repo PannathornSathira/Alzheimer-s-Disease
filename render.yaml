@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: alzheimer-disease-api
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /api/keep-alive
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false

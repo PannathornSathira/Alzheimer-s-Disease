@@ -9,4 +9,8 @@ node_modules/
 # Private randomization source and review workbooks
 
 Original-Label/*
+
+# Private allocation workbooks are local-only. The backend uses the A/B CSVs.
+Random/*.xlsx
+Random/*.inspect.ndjson
 #Logic

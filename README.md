@@ -21,3 +21,7 @@ Open `http://localhost:5173`. The API runs at `http://localhost:10000` and Postg
 - Each group has 34 allocations, with 17 A and 17 B. The application never reuses a list after it is exhausted.
 
 Run `npm test` to verify the runtime lists.
+
+## Cloud deployment
+
+The Vite frontend stays on Vercel and the Express API is deployed separately to Render. See [DEPLOYMENT.md](DEPLOYMENT.md) for the required environment variables and deployment settings. Do not add Supabase credentials to the frontend.
